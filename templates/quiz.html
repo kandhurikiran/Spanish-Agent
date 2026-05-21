@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spanish Quiz</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #11111b;
+            color: #cdd6f4;
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .header h1 {
+            color: #cba6f7;
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .progress-bar {
+            background: #313244;
+            border-radius: 10px;
+            height: 10px;
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            background: #cba6f7;
+            border-radius: 10px;
+            height: 10px;
+            transition: width 0.3s ease;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            color: #6c7086;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .streak {
+            color: #fab387;
+            font-size: 16px;
+            margin-top: 5px;
+        }
+
+        .card {
+            background: #1e1e2e;
+            border-radius: 16px;
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 1px solid #313244;
+        }
+
+        .word-spanish {
+            font-size: 48px;
+            font-weight: bold;
+            color: #cba6f7;
+            margin-bottom: 10px;
+        }
+
+        .word-example {
+            font-size: 16px;
+            color: #6c7086;
+            font-style: italic;
+            margin-bottom: 30px;
+        }
+
+        .answer-reveal {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .word-english {
+            font-size: 28px;
+            color: #a6e3a1;
+            margin-bottom: 10px;
+        }
+
+        .example-en {
+            font-size: 14px;
+            color: #6c7086;
+            font-style: italic;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border-radius: 10px;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 10px;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover { opacity: 0.9; }
+
+        .btn-reveal {
+            background: #cba6f7;
+            color: #11111b;
+        }
+
+        .btn-correct {
+            background: #a6e3a1;
+            color: #11111b;
+            display: none;
+        }
+
+        .btn-wrong {
+            background: #f38ba8;
+            color: #11111b;
+            display: none;
+        }
+
+        .completed {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .completed h2 {
+            color: #a6e3a1;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .score {
+            font-size: 48px;
+            color: #cba6f7;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🇪🇸 Spanish Quiz</h1>
+        <div class="streak">🔥 {{ streak }} day streak</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        <div class="stats">
+            <span id="progressText">0 / {{ total_words }}</span>
+            <span id="scoreText">✅ 0 &nbsp; ❌ 0</span>
+        </div>
+    </div>
+
+    <div class="card" id="quizCard">
+        <div class="word-spanish" id="wordSpanish"></div>
+        <div class="word-example" id="wordExample"></div>
+        <div class="answer-reveal" id="answerReveal">
+            <div class="word-english" id="wordEnglish"></div>
+            <div class="example-en" id="exampleEn"></div>
+        </div>
+    </div>
+
+    <button class="btn btn-reveal" id="btnReveal" onclick="revealAnswer()">
+        Show Answer
+    </button>
+    <button class="btn btn-correct" id="btnCorrect" onclick="submitAnswer(true)">
+        ✅ I knew it
+    </button>
+    <button class="btn btn-wrong" id="btnWrong" onclick="submitAnswer(false)">
+        ❌ I missed it
+    </button>
+
+    <div class="completed" id="completedDiv">
+        <h2>Quiz Complete! 🎉</h2>
+        <div class="score" id="finalScore"></div>
+        <p style="color:#6c7086;">Come back tomorrow for more words!</p>
+    </div>
+
+    <script>
+        const words = {{ words | tojson }};
+        const sessionId = {{ session_id }};
+        let currentIndex = 0;
+        let correct = 0;
+        let wrong = 0;
+
+        function loadWord() {
+            if (currentIndex >= words.length) {
+                showCompleted();
+                return;
+            }
+
+            const word = words[currentIndex];
+            document.getElementById('wordSpanish').textContent = word.spanish;
+            document.getElementById('wordExample').textContent = '"' + word.example_es + '"';
+            document.getElementById('wordEnglish').textContent = word.english;
+            document.getElementById('exampleEn').textContent = '"' + word.example_en + '"';
+
+            // Reset buttons
+            document.getElementById('answerReveal').style.display = 'none';
+            document.getElementById('btnReveal').style.display = 'block';
+            document.getElementById('btnCorrect').style.display = 'none';
+            document.getElementById('btnWrong').style.display = 'none';
+
+            // Update progress
+            const progress = (currentIndex / words.length) * 100;
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('progressText').textContent = currentIndex + ' / ' + words.length;
+            document.getElementById('scoreText').textContent = '✅ ' + correct + '   ❌ ' + wrong;
+        }
+
+        function revealAnswer() {
+            document.getElementById('answerReveal').style.display = 'block';
+            document.getElementById('btnReveal').style.display = 'none';
+            document.getElementById('btnCorrect').style.display = 'block';
+            document.getElementById('btnWrong').style.display = 'block';
+        }
+
+        async function submitAnswer(isCorrect) {
+            const word = words[currentIndex];
+
+            // Send result to server
+            await fetch('/quiz/answer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    session_id: sessionId,
+                    word_id: word.id,
+                    correct: isCorrect
+                })
+            });
+
+            if (isCorrect) correct++;
+            else wrong++;
+
+            currentIndex++;
+            loadWord();
+        }
+
+        function showCompleted() {
+            document.getElementById('quizCard').style.display = 'none';
+            document.getElementById('btnReveal').style.display = 'none';
+            document.getElementById('btnCorrect').style.display = 'none';
+            document.getElementById('btnWrong').style.display = 'none';
+
+            const percentage = Math.round((correct / words.length) * 100);
+            document.getElementById('finalScore').textContent = percentage + '%';
+            document.getElementById('completedDiv').style.display = 'block';
+
+            // Mark session complete
+            fetch('/quiz/complete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+            });
+        }
+
+        // Start quiz
+        const sessionCompleted = {{ 'true' if session.completed else 'false' }};
+
+        if (sessionCompleted) {
+            document.getElementById('quizCard').style.display = 'none';
+            document.getElementById('btnReveal').style.display = 'none';
+            document.getElementById('completedDiv').style.display = 'block';
+            document.getElementById('finalScore').textContent = 'Already completed!';
+        } else {
+            loadWord();
+        }
+    </script>
+
+</body>
+</html>
