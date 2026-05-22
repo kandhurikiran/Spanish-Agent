@@ -14,19 +14,38 @@ SCOPES = [
 DREAMING_SPANISH_CHANNEL_ID = 'UCouyFdE9-Lrjo3M_2idKq1A'
 
 def get_google_credentials():
+    import json
+    
     creds = None
-    if os.path.exists('token.json'):
+    
+    # Get token
+    token_json = os.getenv('GOOGLE_TOKEN_JSON')
+    if token_json:
+        creds = Credentials.from_authorized_user_info(
+            json.loads(token_json), SCOPES
+        )
+    elif os.path.exists('token.json'):
         creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES
-            )
+            # Try environment variable for credentials
+            creds_json = os.getenv('GOOGLE_CREDENTIALS_JSON')
+            if creds_json:
+                import tempfile
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                    f.write(creds_json)
+                    temp_path = f.name
+                flow = InstalledAppFlow.from_client_secrets_file(temp_path, SCOPES)
+                os.unlink(temp_path)
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file('credentials.json', SCOPES)
             creds = flow.run_local_server(port=0)
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
+            with open('token.json', 'w') as token:
+                token.write(creds.to_json())
+    
     return creds
 
 def get_todays_videos(youtube):
