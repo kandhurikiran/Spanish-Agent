@@ -33,11 +33,11 @@ import os
 
 DATABASE_URL = os.environ.get("DATABASE_URL")
 
-if not DATABASE_URL:
-    # fallback for local development
-    from dotenv import load_dotenv
-    load_dotenv()
-    DATABASE_URL = os.getenv("DATABASE_URL")
+# Fix URL format for SQLAlchemy
+if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+print("DATABASE_URL found:", DATABASE_URL is not None)
 
 engine = create_engine(
     DATABASE_URL,
