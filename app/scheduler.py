@@ -120,8 +120,8 @@ def start_scheduler():
     scheduler = BackgroundScheduler()
     scheduler.add_job(
         run_daily_agent,
-        CronTrigger(hour=8, minute=0, timezone='Europe/Dublin')
+        CronTrigger(hour=20, minute=0, timezone='Europe/Dublin')
     )
     scheduler.start()
-    print("✅ Scheduler started — agent runs daily at 8am Dublin time")
+    print("✅ Scheduler started — agent runs daily at 8pm Dublin time")
     return scheduler
