@@ -37,8 +37,6 @@ DATABASE_URL = os.environ.get("DATABASE_URL")
 if DATABASE_URL and DATABASE_URL.startswith("postgresql://"):
     DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
-print("DATABASE_URL found:", DATABASE_URL is not None)
-
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
